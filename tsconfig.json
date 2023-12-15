@@ -11,6 +11,11 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "sourceMap": true,
+    "paths": {
+      "ngx-computeasync": [
+        "./dist/ngx-computeasync"
+      ]
+    },
     "declaration": false,
     "downlevelIteration": true,
     "experimentalDecorators": true,
