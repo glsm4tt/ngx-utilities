@@ -1,6 +1,13 @@
 {
   "name": "@appstrophe/ngx-computeasync",
   "version": "0.0.1",
+  "description": "Computed for async functions",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/glsm4tt/ngx-utilities.git"
+  },
+  "homepage": "https://github.com/glsm4tt/ngx-utilities/tree/main/projects/ngx-computeasync",
   "peerDependencies": {
     "@angular/common": "^17.0.0",
     "@angular/core": "^17.0.0"
