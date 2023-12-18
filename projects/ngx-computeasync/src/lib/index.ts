@@ -1,5 +1,5 @@
 import { WritableSignal, Signal, signal, isSignal, effect } from "@angular/core";
-import { BehaviorSubject, Observable, Subject, lastValueFrom } from "rxjs";
+import { BehaviorSubject, Observable, Subject, Subscription } from "rxjs";
 
 type AsyncOnCancel = (cancelCallback: any) => void;
 
@@ -14,6 +14,20 @@ export type ComputeAsyncOptions = {
     | BehaviorSubject<boolean>
 }
 
+/**
+ * Computed for async functions.
+ * 
+ * @example
+ * ```ts
+ * numberSignal = signal(1);
+ * function asyncDouble = (value: number) => new Promise(resolve => setTimeout(() => value * 2, 500));
+ * computedFromPromise = computedAsync(() => asyncDouble(this.numberSignal()));
+ * ```
+ * 
+ * @param evaluationCallback Yhe callback to compute.
+ * @param options The computedAsync options.
+ * @returns The computed singal.
+ */
 export function computedAsync<T>(
   evaluationCallback: (
     onCancel: AsyncOnCancel
@@ -25,6 +39,9 @@ export function computedAsync<T>(
 
   // wheter the async call is complete or not
   let hasFinished = false;
+
+  // rxjs `Subscription` that will be use to avoid memory leaks in case of `Observable`
+  let subscription: Subscription;
 
   // function to set a new value to the evaluating reactive object
   const setEvaluating = (
@@ -48,6 +65,8 @@ export function computedAsync<T>(
 
   effect(
     async (onCleanup) => {
+      if(subscription)
+        subscription.unsubscribe();
       try {
         // calling the passed function
         const res = evaluationCallback((cancelCallback) => {
@@ -56,7 +75,9 @@ export function computedAsync<T>(
             if (!hasFinished) cancelCallback();
           });
         });
-        if (res instanceof Observable) current.set(await lastValueFrom(res));
+        if (res instanceof Observable) {
+          subscription = res.subscribe(current.set);
+        }
         else if (res instanceof Promise) current.set(await res);
         else current.set(res);
       } catch (e) {
