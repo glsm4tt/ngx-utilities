@@ -1,6 +1,7 @@
 {
   "name": "@appstrophe/ngx-computeasync",
-  "version": "0.0.3",
+  "version": "0.0.4",
+  "private": true,
   "description": "Computed for async functions",
   "repository": {
     "type": "git",
@@ -14,5 +15,7 @@
   "dependencies": {
     "tslib": "^2.3.0"
   },
+  "author": "Appstrophe Authors",
+  "license": "MIT",
   "sideEffects": false
 }
