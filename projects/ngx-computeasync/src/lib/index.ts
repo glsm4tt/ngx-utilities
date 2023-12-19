@@ -1,4 +1,5 @@
-import { WritableSignal, Signal, signal, isSignal, effect } from "@angular/core";
+import { WritableSignal, Signal, signal, isSignal, effect, DestroyRef, inject } from "@angular/core";
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable, Subject, Subscription } from "rxjs";
 
 type AsyncOnCancel = (cancelCallback: any) => void;
@@ -34,6 +35,7 @@ export function computedAsync<T>(
   ) => T | Promise<T> | Observable<T>,
   options?: ComputeAsyncOptions
 ): Signal<T | undefined> {
+  const destroyRef = inject(DestroyRef);
   const evaluating = options?.evaluating;
   let current = signal(options?.initialValue);
 
@@ -59,24 +61,25 @@ export function computedAsync<T>(
     }
   };
 
-  if (evaluating) {
-    setEvaluating(evaluating, false);
-  }
-
   effect(
     async (onCleanup) => {
       if(subscription)
         subscription.unsubscribe();
+
+      if (evaluating) 
+        setEvaluating(evaluating, false);
+
       try {
         // calling the passed function
         const res = evaluationCallback((cancelCallback) => {
           onCleanup(() => {
+            if(subscription) subscription.unsubscribe();
             if (evaluating) setEvaluating(evaluating, false);
             if (!hasFinished) cancelCallback();
           });
         });
         if (res instanceof Observable) {
-          subscription = res.subscribe(current.set);
+          subscription = res.pipe(takeUntilDestroyed(destroyRef)).subscribe(current.set);
         }
         else if (res instanceof Promise) current.set(await res);
         else current.set(res);

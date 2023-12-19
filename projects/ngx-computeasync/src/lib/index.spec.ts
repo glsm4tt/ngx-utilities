@@ -1,7 +1,7 @@
 import { Component, Input, WritableSignal, signal, Injectable, inject, effect } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, tick } from '@angular/core/testing';
 import { computedAsync } from './index';
-import { Observable, delay, of } from 'rxjs';
+import { BehaviorSubject, Observable, delay, map, of, timer } from 'rxjs';
 
 interface Product {
   id: number;
@@ -113,3 +113,59 @@ describe('computeAsync', () => {
     expect(component.notifier()).toEqual(true);
   }));
 });
+
+@Component({
+  selector: 'app-test-with-long-life-observable',
+  standalone: true,
+  template: ``
+})
+export class TestComponentWithLongLifeObservable {
+  a: WritableSignal<number> = signal(0);
+  
+  obs$ = (a: number) => timer(0, 10).pipe(map(b => a + b));
+  sum = computedAsync(() => 
+     this.obs$(this.a())
+  );
+}
+
+describe('computeAsync with long life Observables', () => {
+  let component: TestComponentWithLongLifeObservable;
+  let fixture: ComponentFixture<TestComponentWithLongLifeObservable>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TestComponentWithLongLifeObservable]
+    })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(TestComponentWithLongLifeObservable);
+    component = fixture.componentInstance;
+  });
+
+  it('should have sum computed with rxjs timer value and signal', fakeAsync(() => {
+    fixture.detectChanges();
+    tick(0);
+    expect(component.sum()).toEqual(0); // a = 0, b = 0
+    
+    tick(10);
+    expect(component.sum()).toEqual(1); // a = 0, b = 1
+    
+    tick(10);
+    expect(component.sum()).toEqual(2); // a = 0, b = 2
+    
+    component.a.update(a => a + 1);
+    fixture.detectChanges();
+    tick(0);
+    expect(component.sum()).toEqual(1); // a = 1, b = 0
+    
+    tick(10);
+    expect(component.sum()).toEqual(2); // a = 1, b = 1
+    
+    component.a.set(7);
+    fixture.detectChanges();
+    tick(10);
+    expect(component.sum()).toEqual(8); // a = 7, b = 1
+
+    discardPeriodicTasks()
+  })); 
+})
